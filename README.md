@@ -9,6 +9,7 @@ It includes:
 - Embedding generation and vector storage
 - Retrieval-Augmented Generation (RAG) question answering
 - A standalone retrieval-only service variant
+- **Interactive web frontend UI** (Paperlight) for drag-and-drop uploads and chat Q&A
 
 ## Tech Stack
 
@@ -24,7 +25,23 @@ It includes:
 
 ```text
 embedding/
-├── app/                    # Combined service: indexing + /ask RAG
+├── app/
+│   ├── main.py             # FastAPI app entry + static file mount
+│   ├── routes.py           # /embed and /ask API routes
+│   ├── static/             # 🌐 Frontend (Paperlight UI)
+│   │   ├── index.html      #    HTML structure
+│   │   ├── app.js          #    JS logic (upload, chat, toasts)
+│   │   └── style.css       #    Dark-theme styling
+│   ├── embedding_service.py
+│   ├── llm_service.py
+│   ├── retrieval_service.py
+│   ├── vector_store.py
+│   ├── document_loader.py
+│   ├── chunking.py
+│   ├── prompt_builder.py
+│   ├── config.py
+│   ├── schemas.py
+│   └── utils.py
 ├── indexing/               # Retrieval-only service (legacy/separate flow)
 ├── documents/              # Uploaded files saved here
 ├── chroma_db/              # Main persistent vector database
@@ -81,7 +98,13 @@ ollama serve
 python -m uvicorn app.main:app --reload
 ```
 
-5. Open docs:
+5. Open **Frontend UI** (Paperlight — drag & drop documents + chat Q&A):
+
+```text
+👉 http://127.0.0.1:8000/app
+```
+
+6. Open API docs (optional, for testing endpoints directly):
 
 ```text
 http://127.0.0.1:8000/docs
@@ -95,6 +118,7 @@ When the application is fully started, the following services are active:
 |---|---|---|---|
 | **Ollama Server** | `11434` | 18064 | `ollama serve` |
 | **FastAPI App (Uvicorn)** | `8000` | 13492 | `python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000` |
+| **🌐 Frontend UI (Paperlight)** | `8000` | same as FastAPI | Open browser → `http://127.0.0.1:8000/app` |
 
 ## Complete Setup & Run Commands (PowerShell)
 
@@ -149,7 +173,26 @@ export PYTHONPATH="$(pwd)"
 python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-### Step 5 — Verification Commands
+### Step 5 — Open the Frontend UI (Paperlight)
+
+Once the server is running, open this URL in your web browser:
+
+```text
+🌐 http://127.0.0.1:8000/app
+```
+
+Or launch it directly from PowerShell:
+
+```powershell
+Start-Process "http://127.0.0.1:8000/app"
+```
+
+This UI lets you:
+- Drag & drop PDF / DOCX / TXT files to index
+- Click "Index documents" to embed them
+- Ask questions in plain English and get grounded answers with source citations
+
+### Step 6 — Verification Commands (optional)
 
 Check if the application is healthy:
 
@@ -180,11 +223,22 @@ curl http://127.0.0.1:8000/health
 
 | URL | Purpose |
 |---|---|
+| **👉 http://127.0.0.1:8000/app** | **🌐 Frontend UI (Paperlight) — upload docs + chat Q&A** |
 | http://127.0.0.1:8000 | API root status |
 | http://127.0.0.1:8000/health | Health check endpoint |
-| **http://127.0.0.1:8000/docs** | **Swagger UI — interactive API playground** |
+| http://127.0.0.1:8000/docs | Swagger UI — interactive API playground |
 | http://127.0.0.1:8000/redoc | ReDoc styled API documentation |
 | http://127.0.0.1:11434 | Ollama raw API endpoint |
+
+### Quick launch (PowerShell one-liners)
+
+```powershell
+# Open frontend UI
+Start-Process "http://127.0.0.1:8000/app"
+
+# Open Swagger API docs
+Start-Process "http://127.0.0.1:8000/docs"
+```
 
 ## Developer run commands (commands I used)
 
@@ -200,12 +254,16 @@ ollama serve
 # If you see "No module named 'app'", set PYTHONPATH to the embedding folder:
 $env:PYTHONPATH='C:\Users\SRUTHI\Desktop\project\local_rag_engine\embedding'
 python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+
+# 🌐 After server starts, open the frontend in a new browser tab:
+Start-Process "http://127.0.0.1:8000/app"
 ```
 
 - From the repository root (cross-platform):
 
 ```bash
 python -m uvicorn embedding.app.main:app --reload --host 127.0.0.1 --port 8000
+# Then open: http://127.0.0.1:8000/app
 ```
 
 - If you run from inside the `embedding/` folder (bash):
@@ -214,6 +272,7 @@ python -m uvicorn embedding.app.main:app --reload --host 127.0.0.1 --port 8000
 # export PYTHONPATH to the current folder, then run the app module
 export PYTHONPATH="$(pwd)"
 python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+# Then open: http://127.0.0.1:8000/app
 ```
 
 - Quick health-check:
@@ -222,6 +281,13 @@ python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 curl http://127.0.0.1:8000/health
 # expected: {"status":"ok"}
 ```
+
+- 🌐 Frontend quick links:
+
+| What | URL |
+|---|---|
+| Upload + Chat UI (main) | http://127.0.0.1:8000/app |
+| Swagger API docs | http://127.0.0.1:8000/docs |
 
 Note: Ollama models (`nomic-embed-text`, `tinyllama`) are required for embedding and LLM calls. If you don't use Ollama, update the app configuration accordingly.
 
