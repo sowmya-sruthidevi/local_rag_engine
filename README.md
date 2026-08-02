@@ -1,274 +1,277 @@
-# Embedding and RAG Service
+# Embedding + Indexing + RAG Project
 
-A production-ready FastAPI service for document ingestion and retrieval-augmented generation.
+This repository contains a complete document question-answering system built with FastAPI, Ollama, and ChromaDB.
 
-The service now performs both indexing and answering:
+It includes:
 
-- Upload documents.
-- Extract text.
-- Split text into chunks.
-- Generate embeddings with Ollama `nomic-embed-text`.
-- Store chunks, vectors, and metadata in persistent ChromaDB.
-- Retrieve relevant chunks for a question.
-- Build a grounded prompt.
-- Generate a final answer with Ollama `tinyllama`.
+
+- Document ingestion and indexing (PDF, DOCX, TXT)
+- Embedding generation and vector storage
+- Retrieval-Augmented Generation (RAG) question answering
+- A standalone retrieval-only service variant
 
 ## Tech Stack
 
 - Python 3.11+
 - FastAPI
 - Ollama
-- `nomic-embed-text`
 - ChromaDB
-- LangChain `RecursiveCharacterTextSplitter`
-- `pypdf`
-- `python-docx`
+- LangChain text splitters
+- pypdf
+- python-docx
 
-## Project Structure
+## Repository Layout
 
 ```text
-project/
-├── app/
-│   ├── main.py
-│   ├── routes.py
-│   ├── schemas.py
-│   ├── config.py
-│   ├── document_loader.py
-│   ├── chunking.py
-│   ├── embedding_service.py
-│   ├── llm_service.py
-│   ├── prompt_builder.py
-│   ├── retrieval_service.py
-│   ├── vector_store.py
-│   └── utils.py
-├── documents/
-├── chroma_db/
-├── requirements.txt
-├── README.md
-└── .gitignore
+embedding/
+├── app/                    # Combined service: indexing + /ask RAG
+├── indexing/               # Retrieval-only service (legacy/separate flow)
+├── documents/              # Uploaded files saved here
+├── chroma_db/              # Main persistent vector database
+├── requirements.txt        # Dependencies for app/
+├── README.md               # Project-level documentation (this file)
 ```
 
-## Setup
+## Folder Roles
 
-Install dependencies:
+### app/
 
-```bash
+Primary service for the whole project.
+
+- `POST /embed`: upload, parse, chunk, embed, and store vectors
+- `POST /ask`: retrieve relevant chunks and generate grounded answers
+
+Use this when you want one API that handles the full pipeline end to end.
+
+### indexing/
+
+Retrieval-only service variant.
+
+- Exposes `POST /ask`
+- Assumes documents are already indexed in ChromaDB
+
+Use this if indexing and retrieval are run as separate services.
+
+## Recommended Way To Run (Full Project)
+
+This is the common flow for the entire project.
+
+1. Install dependencies:
+
+```powershell
 pip install -r requirements.txt
 ```
 
-Start Ollama and download the embedding and chat models:
+2. Pull Ollama models:
 
-```bash
+```powershell
 ollama pull nomic-embed-text
 ollama pull tinyllama
+```
+
+3. Start Ollama:
+
+```powershell
 ollama serve
 ```
 
-Run the API:
+4. Start the combined API:
 
-```bash
-uvicorn app.main:app --reload
+```powershell
+python -m uvicorn app.main:app --reload
 ```
 
-Open the API docs:
+5. Open docs:
 
 ```text
 http://127.0.0.1:8000/docs
 ```
 
-Swagger UI should show:
+## Currently Running Services
 
-- `GET /`
-- `POST /embed`
-- `POST /ask`
+When the application is fully started, the following services are active:
 
-## Endpoint
+| Service | Port | Default PID | Command |
+|---|---|---|---|
+| **Ollama Server** | `11434` | 18064 | `ollama serve` |
+| **FastAPI App (Uvicorn)** | `8000` | 13492 | `python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000` |
 
-### POST /embed
+## Complete Setup & Run Commands (PowerShell)
 
-Accepts multiple files using multipart form data field name `files`.
+Execute these commands in order from the project root directory.
 
-Supported formats:
+### Step 1 — Install Dependencies
 
-- PDF
-- DOCX
-- TXT
+```powershell
+pip install -r embedding\requirements.txt
+```
 
-Example:
+### Step 2 — Download Required Ollama Models (one-time)
+
+```powershell
+ollama pull nomic-embed-text
+ollama pull tinyllama
+```
+
+Optional extra model:
+```powershell
+ollama pull phi
+```
+
+### Step 3 — Start Ollama Server (Terminal #1)
+
+Keep this terminal open and running:
+
+```powershell
+ollama serve
+```
+
+### Step 4 — Start the FastAPI Application (Terminal #2)
+
+#### Option A: Run from the `embedding\` directory (with PYTHONPATH):
+
+```powershell
+cd embedding
+$env:PYTHONPATH='C:\Users\SRUTHI\Desktop\project\local_rag_engine\embedding'
+python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+#### Option B: Run from project root (no PYTHONPATH needed):
+
+```powershell
+python -m uvicorn embedding.app.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+#### Option C: Bash / cross-platform from `embedding/` folder:
 
 ```bash
-curl -X POST "http://127.0.0.1:8000/embed" \
-  -F "files=@docker.pdf" \
-  -F "files=@python.docx" \
-  -F "files=@rag_notes.txt"
+export PYTHONPATH="$(pwd)"
+python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-Successful response:
+### Step 5 — Verification Commands
 
-```json
-{
-  "status": "success",
-  "message": "All documents were indexed successfully.",
-  "total_files": 3,
-  "processed_files": 3,
-  "failed_files": 0,
-  "total_chunks": 148,
-  "total_embeddings": 148,
-  "files": [
-    {
-      "filename": "docker.pdf",
-      "status": "success",
-      "chunks_created": 42
-    },
-    {
-      "filename": "python.docx",
-      "status": "success",
-      "chunks_created": 58
-    },
-    {
-      "filename": "rag_notes.txt",
-      "status": "success",
-      "chunks_created": 48
-    }
-  ]
-}
+Check if the application is healthy:
+
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/health" -UseBasicParsing
 ```
 
-Partial success response:
+List available Ollama models:
 
-```json
-{
-  "status": "partial_success",
-  "message": "Some documents were indexed successfully, and some failed.",
-  "total_files": 2,
-  "processed_files": 1,
-  "failed_files": 1,
-  "total_chunks": 42,
-  "total_embeddings": 42,
-  "files": [
-    {
-      "filename": "docker.pdf",
-      "status": "success",
-      "chunks_created": 42
-    },
-    {
-      "filename": "broken.pdf",
-      "status": "failed",
-      "chunks_created": 0,
-      "error": "Could not parse 'broken.pdf'."
-    }
-  ]
-}
+```powershell
+ollama list
 ```
 
-## Indexing Pipeline
+Check which services are listening on expected ports:
 
-### 1. Document Upload
-
-The `/embed` endpoint accepts one or more uploaded files. Each file is validated by extension and saved in the local `documents/` folder with a unique prefix so repeated filenames do not overwrite each other.
-
-### 2. Document Loading
-
-The service loads each saved document based on its file type:
-
-- PDF files are loaded page by page with `pypdf`.
-- DOCX files are loaded with `python-docx`.
-- TXT files are loaded as UTF-8 text.
-
-Each file is processed independently. A failed file is reported in the response without preventing other valid files from being indexed.
-
-### 3. Text Extraction
-
-Text is extracted from the loaded document. PDF page numbers are preserved when available. DOCX and TXT files are treated as single logical documents because reliable page numbers are not available without rendering the document.
-
-Empty documents are skipped and reported as failed file entries.
-
-### 4. Chunking
-
-Extracted text is split with `RecursiveCharacterTextSplitter`.
-
-Configuration:
-
-```text
-Chunk size: 1000 characters
-Chunk overlap: 200 characters
+```powershell
+netstat -ano | findstr /R "8000 11434"
 ```
 
-Each chunk receives a unique chunk ID built from the saved document identifier, page marker, and chunk number.
-
-### 5. Embedding Generation
-
-The service calls Ollama's embedding API:
-
-```text
-http://localhost:11434/api/embed
-```
-
-Model:
-
-```text
-nomic-embed-text
-```
-
-One embedding vector is generated for every chunk.
-
-### 6. Storing Embeddings in ChromaDB
-
-ChromaDB uses a persistent local database at:
-
-```text
-chroma_db/
-```
-
-For every chunk, the service stores:
-
-- Chunk text
-- Embedding vector
-- Filename
-- Page number, if available
-- Chunk ID
-
-### POST /ask
-
-Accepts a question and answers it from the indexed document chunks.
-
-Example:
+Bash / curl health check:
 
 ```bash
-curl -X POST "http://127.0.0.1:8000/ask" \
-  -H "Content-Type: application/json" \
-  -d "{\"question\": \"What is Docker?\"}"
+curl http://127.0.0.1:8000/health
+# expected: {"status":"ok"}
 ```
 
-Successful response:
+## Access Points After Running
 
-```json
-{
-  "question": "What is Docker?",
-  "answer": "Docker is a platform for packaging and running applications in containers.",
-  "sources": ["docker.pdf"],
-  "retrieved_chunks": ["..."],
-  "similarity_scores": [0.91],
-  "used_llm": true
-}
+| URL | Purpose |
+|---|---|
+| http://127.0.0.1:8000 | API root status |
+| http://127.0.0.1:8000/health | Health check endpoint |
+| **http://127.0.0.1:8000/docs** | **Swagger UI — interactive API playground** |
+| http://127.0.0.1:8000/redoc | ReDoc styled API documentation |
+| http://127.0.0.1:11434 | Ollama raw API endpoint |
+
+## Developer run commands (commands I used)
+
+The following are the exact commands I ran to get the service running locally.
+
+- PowerShell (from repo root):
+
+```powershell
+pip install -r embedding/requirements.txt
+ollama pull nomic-embed-text
+ollama pull tinyllama
+ollama serve
+# If you see "No module named 'app'", set PYTHONPATH to the embedding folder:
+$env:PYTHONPATH='C:\Users\SRUTHI\Desktop\project\local_rag_engine\embedding'
+python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-If the index is empty, the service returns a conflict response telling you to upload and index documents first.
+- From the repository root (cross-platform):
 
-## Retrieval Pipeline
+```bash
+python -m uvicorn embedding.app.main:app --reload --host 127.0.0.1 --port 8000
+```
 
-1. `routes.py` receives `POST /ask` and validates the JSON body with `AskRequest`.
-2. `retrieval_service.py` embeds the user question with Ollama `nomic-embed-text`.
-3. `vector_store.py` performs a similarity search against the existing ChromaDB collection.
-4. `prompt_builder.py` turns the retrieved chunks into a grounded prompt.
-5. `llm_service.py` sends the prompt to Ollama using `tinyllama`.
-6. The API returns the question, answer, sources, retrieved chunks, and similarity scores.
+- If you run from inside the `embedding/` folder (bash):
 
-The database persists after server restarts.
+```bash
+# export PYTHONPATH to the current folder, then run the app module
+export PYTHONPATH="$(pwd)"
+python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+- Quick health-check:
+
+```bash
+curl http://127.0.0.1:8000/health
+# expected: {"status":"ok"}
+```
+
+Note: Ollama models (`nomic-embed-text`, `tinyllama`) are required for embedding and LLM calls. If you don't use Ollama, update the app configuration accordingly.
+
+Note: There is no top-level `app.py`; run with `uvicorn app.main:app`.
+
+## End-to-End Workflow
+
+1. Upload documents using `POST /embed`
+2. Text is extracted and chunked
+3. Embeddings are generated and stored in ChromaDB
+4. Ask questions using `POST /ask`
+5. The app retrieves top-matching chunks and sends grounded context to the LLM
+6. The answer is returned with source metadata
+
+## API Summary (Combined app/ Service)
+
+- `GET /` : service status
+- `GET /health` : health check
+- `POST /embed` : index uploaded documents
+- `POST /ask` : answer questions from indexed content
+
+### Example: Embed
+
+```powershell
+curl -X POST "http://127.0.0.1:8000/embed" `
+  -F "files=@sample.pdf"
+```
+
+### Example: Ask
+
+```powershell
+curl -X POST "http://127.0.0.1:8000/ask" `
+  -H "Content-Type: application/json" `
+  -d "{\"question\":\"What is this document about?\"}"
+```
 
 ## Configuration
 
-Settings can be overridden with environment variables:
+Main environment variables:
+
+```text
+CHROMA_DB_PATH=chroma_db
+COLLECTION_NAME=document_embeddings
+OLLAMA_LLM_MODEL=tinyllama
+RETRIEVAL_TOP_K=4
+RETRIEVAL_SIMILARITY_THRESHOLD=0.5
+RETRIEVAL_MAX_DISTANCE=
+```
+
+App-prefixed settings are also supported:
 
 ```text
 EMBEDDING_SERVICE_DOCUMENTS_DIR=documents
@@ -278,20 +281,25 @@ EMBEDDING_SERVICE_OLLAMA_BASE_URL=http://localhost:11434
 EMBEDDING_SERVICE_OLLAMA_EMBEDDING_MODEL=nomic-embed-text
 EMBEDDING_SERVICE_CHUNK_SIZE=1000
 EMBEDDING_SERVICE_CHUNK_OVERLAP=200
-OLLAMA_LLM_MODEL=tinyllama
-RETRIEVAL_TOP_K=4
-RETRIEVAL_SIMILARITY_THRESHOLD=0.5
 ```
+
+## Important For Dual-Folder Setup
+
+If you run `indexing/` and `app/` separately, both must point to the same:
+
+- ChromaDB path
+- Collection name
+- Embedding model
+
+Otherwise retrieval may not find indexed vectors.
 
 ## Error Handling
 
-The service handles:
+The services handle:
 
-- Unsupported file type
-- Empty document
-- Corrupted document
-- Ollama server unavailable
-- Embedding generation failure
-- ChromaDB storage failure
-
-For upload-level problems, the API returns a request error. For per-file indexing problems, the API returns `partial_success` or `failed` with file-level error details.
+- Unsupported file types
+- Empty/corrupted documents
+- Empty vector store
+- Ollama unavailable
+- Embedding/generation failures
+- ChromaDB storage errors
