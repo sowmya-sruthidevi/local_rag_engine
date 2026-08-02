@@ -1,6 +1,9 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.routes import router
@@ -10,6 +13,8 @@ from app.vector_store import vector_store
 
 configure_logging()
 logger = get_logger(__name__)
+
+STATIC_DIR = Path(__file__).parent / "static"
 
 
 @asynccontextmanager
@@ -55,3 +60,13 @@ app.include_router(router)
 async def health_check() -> dict[str, str]:
     """Simple health endpoint for container and uptime checks."""
     return {"status": "ok"}
+
+
+@app.get("/app", tags=["UI"])
+async def ui_app() -> FileResponse:
+    """Serve the interactive web frontend."""
+    return FileResponse(STATIC_DIR / "index.html")
+
+
+if STATIC_DIR.exists():
+    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
