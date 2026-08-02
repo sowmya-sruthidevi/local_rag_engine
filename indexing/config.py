@@ -27,11 +27,14 @@ LLM_MODEL = os.getenv("OLLAMA_LLM_MODEL", "tinyllama")
 # The older variable names are supported only as a migration fallback.
 CHROMA_DB_PATH = os.getenv(
     "CHROMA_DB_PATH",
-    os.getenv("CHROMA_PERSIST_DIRECTORY", "./chroma_db"),
+    os.getenv(
+    "CHROMA_PERSIST_DIRECTORY",
+    "/home/azureuser/local_rag_engine/embedding/chroma_db",
+),
 )
 COLLECTION_NAME = os.getenv(
     "COLLECTION_NAME",
-    os.getenv("CHROMA_COLLECTION_NAME", "documents"),
+    os.getenv("CHROMA_COLLECTION_NAME", "document_embeddings"),
 )
 RESOLVED_CHROMA_DB_PATH = str(Path(CHROMA_DB_PATH).expanduser().resolve())
 
@@ -54,3 +57,5 @@ RETRIEVAL_MAX_DISTANCE = (
 )
 
 OLLAMA_TIMEOUT_SECONDS = float(os.getenv("OLLAMA_TIMEOUT_SECONDS", "60"))
+
+
