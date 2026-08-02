@@ -1,0 +1,16 @@
+Failed to send telemetry event ClientStartEvent: capture() takes 1 positional argument but 3 were given
+Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+INFO:     Started server process [38648]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8001 (Press CTRL+C to quit)
+2026-06-30 16:02:22,983 | INFO | app.routes | Starting indexing for file: Creator Commerce Platform for Indian Influencers(1).pdf
+2026-06-30 16:03:05,568 | INFO | httpx | HTTP Request: POST http://localhost:11434/api/embed "HTTP/1.1 200 OK"
+2026-06-30 16:03:05,973 | ERROR | chromadb.telemetry.product.posthog | Failed to send telemetry event CollectionAddEvent: capture() takes 1 positional argument but 3 were given
+2026-06-30 16:03:05,989 | INFO | app.routes | Indexed file successfully: Creator Commerce Platform for Indian Influencers(1).pdf chunks=24 embeddings=24
+2026-06-30 16:03:25,883 | INFO | app.routes | Starting indexing for file: Creator Commerce Platform for Indian Influencers(1).pdf
+2026-06-30 16:03:30,553 | INFO | httpx | HTTP Request: POST http://localhost:11434/api/embed "HTTP/1.1 200 OK"
+2026-06-30 16:03:30,673 | INFO | app.routes | Indexed file successfully: Creator Commerce Platform for Indian Influencers(1).pdf chunks=24 embeddings=24
+2026-06-30 16:39:25,937 | INFO | app.routes | Starting indexing for file: Creator Commerce Platform for Indian Influencers(1).pdf
+2026-06-30 16:39:37,527 | INFO | httpx | HTTP Request: POST http://localhost:11434/api/embed "HTTP/1.1 200 OK"
+2026-06-30 16:39:37,919 | INFO | app.routes | Indexed file successfully: Creator Commerce Platform for Indian Influencers(1).pdf chunks=24 embeddings=24
